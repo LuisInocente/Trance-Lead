@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Drum Machine + Bassline + Trance Lead + Mixer</title>
+  <title>Drum Machine + Bassline + Trance Lead + Mixer (A minor)</title>
 
   <link rel="icon" href="data:,">
 
@@ -364,7 +364,7 @@
     }
     .tb_labels,.tb_col{
       display:grid;
-      grid-template-rows: 18px 50px 10px repeat(12, minmax(18px, 1fr));
+      grid-template-rows: 18px 50px 10px repeat(7, minmax(22px, 1fr));
       gap:6px;
       height:100%;
       min-height:0;
@@ -609,7 +609,7 @@
     <!-- BASSLINE -->
     <div class="card">
       <div class="cardHead">
-        <div class="title">Bassline</div>
+        <div class="title">Bassline (A minor)</div>
         <div></div>
       </div>
 
@@ -633,7 +633,7 @@
     <!-- TRANCE LEAD -->
     <div class="card">
       <div class="cardHead">
-        <div class="title">Trance Lead</div>
+        <div class="title">Trance Lead (A minor)</div>
         <div></div>
       </div>
 
@@ -1524,7 +1524,7 @@
       setStatus("");
     });
 
-    // ---------- bass + lead sequencers ----------
+    // ---------- bass + lead sequencers (A MINOR) ----------
     const bassResetBtn = document.getElementById("bassReset");
     const leadResetBtn = document.getElementById("leadReset");
 
@@ -1545,8 +1545,10 @@
     const tbGridEl   = document.getElementById("tb_grid");
     const leadGridEl = document.getElementById("lead_grid");
 
-    const NOTE_NAMES = ["B","A#","A","G#","G","F#","F","E","D#","D","C#","C"];
-    const NOTE_TO_SEMI = { "C":0,"C#":1,"D":2,"D#":3,"E":4,"F":5,"F#":6,"G":7,"G#":8,"A":9,"A#":10,"B":11 };
+    // A harmonic minor scale (high to low): G#, F, E, D, C, B, A
+    const NOTE_NAMES = ["G#","F","E","D","C","B","A"];
+    // Semitones from A (A=0)
+    const NOTE_TO_SEMI = { "A":0, "B":2, "C":3, "D":5, "E":7, "F":8, "G#":11 };
 
     function makeSeqState(){ return { steps: Array.from({length:8}, () => ({ note:null, oct:0 })) }; }
     let bassState = makeSeqState();
@@ -1820,7 +1822,7 @@
     const LOOKAHEAD_MS = 15;
 
     function hzForNote(noteName, oct){
-      const baseMidi = 48; // C3
+      const baseMidi = 45; // A2 (changed from C3 to A2)
       const semi = NOTE_TO_SEMI[noteName];
       const midi = baseMidi + semi + (oct*12);
       return 440 * Math.pow(2, (midi - 69) / 12);
@@ -2193,7 +2195,7 @@
     const loadFileBtn = document.getElementById("loadFileBtn");
     const loadFileInput = document.getElementById("loadFileInput");
 
-    const STORE_KEY = "mm_drum_bass_lead_mixer_responsive_v2xlead";
+    const STORE_KEY = "mm_drum_bass_lead_mixer_Aminor_v1";
 
     let saveTimer=null;
     let dirty=false;
