@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1.0" />
-  <title>Drum Machine + Bassline + Trance Lead + Mixer (A minor)</title>
+  <title>Drum Machine + Bassline + Trance Lead + 4 Loop Recorder (A natural minor)</title>
 
   <link rel="icon" href="data:,">
 
@@ -35,9 +35,15 @@
       --bassOn:#7f1d1d;
       --leadOn:#6d28d9;
 
-      --headerH:64px;
+      --headerH:70px;
       --footerH:40px;
       --gap:12px;
+
+      --loopEmpty:#e5e5e5;
+      --loopArmed:#fbbf24;
+      --loopRecording:#ef4444;
+      --loopReady:#22c55e;
+      --loopPlaying:#3b82f6;
     }
 
     *{ box-sizing:border-box; }
@@ -58,6 +64,12 @@
       background:#fff;
       border-bottom:1px solid var(--border);
       padding:10px 12px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .headerTop{
       display:grid;
       grid-template-columns: 1fr auto 1fr;
       gap:10px;
@@ -68,6 +80,141 @@
     .topLeft{ justify-content:flex-start; }
     .topMid{ justify-content:center; }
     .topRight{ justify-content:flex-end; flex-wrap:wrap; }
+
+    .loopSlots{
+      display:flex;
+      gap:8px;
+    }
+
+    .loopSlot{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:2px;
+    }
+
+    .loopBtn{
+      width:50px;
+      height:40px;
+      border:2px solid var(--border);
+      border-radius:12px;
+      background:var(--loopEmpty);
+      cursor:pointer;
+      font-weight:1000;
+      font-size:16px;
+      color:var(--text);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      transition:all 0.15s ease;
+      position:relative;
+      overflow:hidden;
+    }
+
+    .loopBtn:hover{ transform:scale(1.05); }
+
+    .loopBtn.armed{
+      background:var(--loopArmed);
+      border-color:#f59e0b;
+      animation:pulse 0.8s ease-in-out infinite;
+    }
+
+    .loopBtn.recording{
+      background:var(--loopRecording);
+      border-color:#dc2626;
+      color:#fff;
+      animation:pulse 0.5s ease-in-out infinite;
+    }
+
+    .loopBtn.ready{
+      background:var(--loopReady);
+      border-color:#16a34a;
+      color:#fff;
+    }
+
+    .loopBtn.playing{
+      background:var(--loopPlaying);
+      border-color:#2563eb;
+      color:#fff;
+      box-shadow:0 0 20px rgba(59,130,246,0.5);
+    }
+
+    @keyframes pulse{
+      0%,100%{ opacity:1; }
+      50%{ opacity:0.7; }
+    }
+
+    .loopProgress{
+      position:absolute;
+      bottom:0;
+      left:0;
+      height:4px;
+      background:rgba(255,255,255,0.7);
+      width:0%;
+      transition:width 0.1s linear;
+    }
+
+    .loopStatus{
+      font-size:9px;
+      font-weight:900;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:0.3px;
+    }
+
+    .loopStatus.armed{ color:#f59e0b; }
+    .loopStatus.recording{ color:#ef4444; }
+    .loopStatus.ready{ color:#22c55e; }
+    .loopStatus.playing{ color:#3b82f6; }
+
+    .loopControlBtn{
+      height:32px;
+      padding:0 10px;
+      border-radius:10px;
+      font-size:11px;
+      font-weight:900;
+      border:1px solid var(--border);
+      background:#fff;
+      cursor:pointer;
+    }
+
+    .loopControlBtn.stop{ background:#ef4444; color:#fff; border-color:#dc2626; }
+    .loopControlBtn:disabled{ opacity:0.4; cursor:not-allowed; }
+
+    .beatIndicator{
+      display:flex;
+      align-items:center;
+      gap:6px;
+      padding:6px 12px;
+      background:#fff;
+      border:1px solid var(--border);
+      border-radius:12px;
+    }
+
+    .beatDot{
+      width:12px;
+      height:12px;
+      border-radius:50%;
+      background:#e5e5e5;
+      transition:all 0.1s ease;
+    }
+
+    .beatDot.active{
+      background:#111;
+      transform:scale(1.3);
+    }
+
+    .beatDot.bar1.active{ background:#ef4444; }
+    .beatDot.bar2.active{ background:#f59e0b; }
+    .beatDot.bar3.active{ background:#22c55e; }
+    .beatDot.bar4.active{ background:#3b82f6; }
+
+    .barLabel{
+      font-size:11px;
+      font-weight:900;
+      color:var(--muted);
+      min-width:50px;
+    }
 
     .pill{
       display:flex; align-items:center; gap:10px;
@@ -83,7 +230,7 @@
 
     input[type="range"]{ accent-color:#111; }
 
-    .tempoRange{ width:220px; }
+    .tempoRange{ width:140px; }
 
     button{
       border:1px solid var(--border);
@@ -479,58 +626,60 @@
       footer{ grid-template-columns:1fr; height:auto; }
       .footerSpacer{ display:none; }
       .footerRight{ grid-column:1; justify-self:end; }
+      .loopSection{ flex-wrap:wrap; }
     }
-
-    /* Record progress */
-    .recProg{
-      position:relative;
-      width:220px;
-      height:10px;
-      border-radius:999px;
-      border:1px solid var(--border);
-      background:rgba(0,0,0,.06);
-      overflow:hidden;
-    }
-    .recProg .fill{ position:absolute; inset:0; width:0%; background:rgba(239,68,68,.22); }
-    .recProg .line{ position:absolute; top:-6px; bottom:-6px; width:2px; left:0%; background:#ef4444; box-shadow:0 0 0 1px rgba(239,68,68,.15); }
-    .recProgLabel{ font-variant-numeric:tabular-nums; font-weight:950; color:var(--text); width:2ch; text-align:right; }
   </style>
 </head>
 
 <body>
   <header>
-    <div class="topLeft">
-      <div class="pill">
-        <span>Tempo</span>
-        <input id="tempo" class="tempoRange" type="range" min="80" max="160" value="120">
-        <strong id="tempoVal">120</strong>
+    <div class="headerTop">
+      <div class="topLeft">
+        <div class="loopSlots">
+          <div class="loopSlot">
+            <button class="loopBtn" id="loop1Btn" data-slot="0">1</button>
+            <span class="loopStatus" id="loop1Status">Empty</span>
+          </div>
+          <div class="loopSlot">
+            <button class="loopBtn" id="loop2Btn" data-slot="1">2</button>
+            <span class="loopStatus" id="loop2Status">Empty</span>
+          </div>
+          <div class="loopSlot">
+            <button class="loopBtn" id="loop3Btn" data-slot="2">3</button>
+            <span class="loopStatus" id="loop3Status">Empty</span>
+          </div>
+          <div class="loopSlot">
+            <button class="loopBtn" id="loop4Btn" data-slot="3">4</button>
+            <span class="loopStatus" id="loop4Status">Empty</span>
+          </div>
+        </div>
+        <button class="loopControlBtn stop" id="loopStopBtn">Stop</button>
+        <button class="loopControlBtn" id="loopClearBtn">Clear</button>
       </div>
-    </div>
 
-    <div class="topMid">
-      <button id="masterPlay" class="primary">Play</button>
-      <button id="masterStop" disabled>Stop</button>
-    </div>
-
-    <div class="topRight">
-      <div class="pill">
-        <span>Vol</span>
-        <input id="masterVol" type="range" min="0" max="1" value="0.90" step="0.01">
-      </div>
-
-      <button id="recBtn" class="smallBtn">● Record</button>
-
-      <div class="pill" style="gap:10px;">
-        <span class="recProgLabel" id="recCountdown">60</span>
-        <div class="recProg" id="recProg" aria-label="Recording progress">
-          <div class="fill" id="recFill"></div>
-          <div class="line" id="recLine"></div>
+      <div class="topMid">
+        <button id="masterPlay" class="primary">▶ Play</button>
+        <button id="masterStop" disabled>■ Stop</button>
+        <div class="beatIndicator">
+          <span class="barLabel" id="barLabel">Bar 1</span>
+          <div class="beatDot bar1" id="beat1"></div>
+          <div class="beatDot bar2" id="beat2"></div>
+          <div class="beatDot bar3" id="beat3"></div>
+          <div class="beatDot bar4" id="beat4"></div>
         </div>
       </div>
 
-      <button id="recPlayBtn" class="smallBtn" disabled>Play</button>
-      <button id="recStopBtn" class="smallBtn" disabled>Stop</button>
-      <button id="recExportBtn" class="smallBtn" disabled>Export WAV</button>
+      <div class="topRight">
+        <div class="pill">
+          <span>Tempo</span>
+          <input id="tempo" class="tempoRange" type="range" min="80" max="160" value="120">
+          <strong id="tempoVal">120</strong>
+        </div>
+        <div class="pill">
+          <span>Vol</span>
+          <input id="masterVol" type="range" min="0" max="1" value="0.90" step="0.01">
+        </div>
+      </div>
     </div>
   </header>
 
@@ -609,7 +758,7 @@
     <!-- BASSLINE -->
     <div class="card">
       <div class="cardHead">
-        <div class="title">Bassline (A minor)</div>
+        <div class="title">Bassline</div>
         <div></div>
       </div>
 
@@ -633,7 +782,7 @@
     <!-- TRANCE LEAD -->
     <div class="card">
       <div class="cardHead">
-        <div class="title">Trance Lead (A minor)</div>
+        <div class="title">Trance Lead</div>
         <div></div>
       </div>
 
@@ -720,8 +869,6 @@
             </div>
           </div>
         </div>
-
-      
       </div>
     </div>
   </div>
@@ -763,6 +910,7 @@
     function quarterSec(){ return 60/tempo(); }
     function dotted8Sec(){ return quarterSec()*0.75; }
     function sixteenthSec(){ return quarterSec()/4; }
+    function fourBarsSec(){ return quarterSec() * 16; } // 4 bars = 16 beats
 
     tempoVal.textContent = String(tempo());
     bindInput(tempoEl, () => {
@@ -773,6 +921,213 @@
       }
       scheduleSave();
     });
+
+    // ---------- Beat indicator ----------
+    const barLabelEl = document.getElementById("barLabel");
+    const beatDots = [
+      document.getElementById("beat1"),
+      document.getElementById("beat2"),
+      document.getElementById("beat3"),
+      document.getElementById("beat4")
+    ];
+
+    function updateBeatIndicator(bar, beat){
+      barLabelEl.textContent = `Bar ${bar}`;
+      beatDots.forEach((dot, i) => {
+        dot.classList.remove("active", "bar1", "bar2", "bar3", "bar4");
+        if(i < beat){
+          dot.classList.add("active", `bar${bar}`);
+        }
+      });
+    }
+
+    // ---------- Loop Recording System ----------
+    const loopBtns = [
+      document.getElementById("loop1Btn"),
+      document.getElementById("loop2Btn"),
+      document.getElementById("loop3Btn"),
+      document.getElementById("loop4Btn")
+    ];
+    const loopStatuses = [
+      document.getElementById("loop1Status"),
+      document.getElementById("loop2Status"),
+      document.getElementById("loop3Status"),
+      document.getElementById("loop4Status")
+    ];
+    const loopStopBtn = document.getElementById("loopStopBtn");
+    const loopClearBtn = document.getElementById("loopClearBtn");
+
+    // Loop state: each slot can have a recorded audio buffer
+    const loopSlots = [null, null, null, null]; // AudioBuffer for each slot
+    let armedSlot = -1; // Which slot is armed for recording (-1 = none)
+    let recordingSlot = -1; // Which slot is currently recording (-1 = none)
+    let playingSlot = -1; // Which slot is playing (-1 = none)
+    let loopRecorder = null; // MediaRecorder for loop recording
+    let loopChunks = [];
+    let loopRecordStartStep = -1;
+    let loopSource = null; // Current playing loop source
+
+    function updateLoopUI(){
+      loopBtns.forEach((btn, i) => {
+        btn.classList.remove("armed", "recording", "ready", "playing");
+        loopStatuses[i].classList.remove("armed", "recording", "ready", "playing");
+        
+        if(i === armedSlot){
+          btn.classList.add("armed");
+          loopStatuses[i].textContent = "Armed";
+          loopStatuses[i].classList.add("armed");
+        } else if(i === recordingSlot){
+          btn.classList.add("recording");
+          loopStatuses[i].textContent = "Recording...";
+          loopStatuses[i].classList.add("recording");
+        } else if(i === playingSlot){
+          btn.classList.add("playing");
+          loopStatuses[i].textContent = "Playing";
+          loopStatuses[i].classList.add("playing");
+        } else if(loopSlots[i]){
+          btn.classList.add("ready");
+          loopStatuses[i].textContent = "Ready";
+          loopStatuses[i].classList.add("ready");
+        } else {
+          loopStatuses[i].textContent = "Empty";
+        }
+      });
+    }
+
+    function armLoopSlot(slot){
+      if(recordingSlot >= 0) return; // Can't arm while recording
+      
+      if(armedSlot === slot){
+        // Toggle off
+        armedSlot = -1;
+      } else {
+        armedSlot = slot;
+      }
+      updateLoopUI();
+    }
+
+    function startLoopRecording(slot){
+      if(!ctx || !recDest) return;
+      
+      recordingSlot = slot;
+      armedSlot = -1;
+      loopChunks = [];
+      
+      try {
+        loopRecorder = new MediaRecorder(recDest.stream);
+        loopRecorder.ondataavailable = (e) => {
+          if(e.data && e.data.size) loopChunks.push(e.data);
+        };
+        
+        loopRecorder.onstop = async () => {
+          try {
+            const blob = new Blob(loopChunks, { type: loopRecorder.mimeType || "audio/webm" });
+            const arr = await blob.arrayBuffer();
+            const buf = await new Promise((resolve, reject) => 
+              ctx.decodeAudioData(arr, resolve, reject)
+            );
+            loopSlots[recordingSlot] = buf;
+            setStatus(`Loop ${recordingSlot + 1} recorded! ✅`);
+          } catch(err) {
+            console.error("Loop decode error:", err);
+            setStatus(`Loop ${recordingSlot + 1} failed`);
+          } finally {
+            recordingSlot = -1;
+            updateLoopUI();
+          }
+        };
+        
+        loopRecorder.start();
+        updateLoopUI();
+        setStatus(`Recording Loop ${slot + 1}...`);
+      } catch(err) {
+        console.error("Loop record error:", err);
+        recordingSlot = -1;
+        updateLoopUI();
+      }
+    }
+
+    function stopLoopRecording(){
+      if(loopRecorder && loopRecorder.state === "recording"){
+        try { loopRecorder.stop(); } catch(_){}
+      }
+    }
+
+    function playLoop(slot){
+      if(!ctx || !loopSlots[slot]) return;
+      
+      // Stop any currently playing loop
+      stopLoopPlayback();
+      
+      playingSlot = slot;
+      
+      // Create source and play
+      loopSource = ctx.createBufferSource();
+      loopSource.buffer = loopSlots[slot];
+      loopSource.loop = true;
+      loopSource.connect(master);
+      
+      loopSource.onended = () => {
+        if(playingSlot === slot){
+          playingSlot = -1;
+          updateLoopUI();
+        }
+      };
+      
+      loopSource.start(0);
+      updateLoopUI();
+      setStatus(`Playing Loop ${slot + 1}`);
+    }
+
+    function stopLoopPlayback(){
+      if(loopSource){
+        try { loopSource.stop(0); } catch(_){}
+        loopSource = null;
+      }
+      playingSlot = -1;
+      updateLoopUI();
+    }
+
+    function clearAllLoops(){
+      stopLoopPlayback();
+      if(recordingSlot >= 0) stopLoopRecording();
+      armedSlot = -1;
+      for(let i = 0; i < 4; i++){
+        loopSlots[i] = null;
+      }
+      updateLoopUI();
+      setStatus("All loops cleared");
+    }
+
+    // Loop button click handlers
+    loopBtns.forEach((btn, i) => {
+      btn.addEventListener("click", async () => {
+        await resumeAudio();
+        
+        if(playingSlot === i){
+          // If this loop is playing, stop it
+          stopLoopPlayback();
+        } else if(loopSlots[i]){
+          // If this slot has a loop, play it
+          playLoop(i);
+        } else if(!isRunning){
+          // If not playing, arm for recording (recording only works while playing)
+          armLoopSlot(i);
+          setStatus(`Loop ${i + 1} armed. Press Play to start recording at Bar 1.`);
+        } else {
+          // If playing and slot is empty, arm it
+          armLoopSlot(i);
+        }
+      });
+    });
+
+    loopStopBtn.addEventListener("click", () => {
+      stopLoopPlayback();
+      if(recordingSlot >= 0) stopLoopRecording();
+      setStatus("Loop stopped");
+    });
+
+    loopClearBtn.addEventListener("click", clearAllLoops);
 
     // ---------- audio ----------
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -1524,7 +1879,7 @@
       setStatus("");
     });
 
-    // ---------- bass + lead sequencers (A MINOR) ----------
+    // ---------- bass + lead sequencers (A NATURAL MINOR) ----------
     const bassResetBtn = document.getElementById("bassReset");
     const leadResetBtn = document.getElementById("leadReset");
 
@@ -1545,10 +1900,11 @@
     const tbGridEl   = document.getElementById("tb_grid");
     const leadGridEl = document.getElementById("lead_grid");
 
-    // A harmonic minor scale (high to low): G#, F, E, D, C, B, A
-    const NOTE_NAMES = ["G#","F","E","D","C","B","A"];
+    // A NATURAL MINOR scale (high to low): G, F, E, D, C, B, A
+    // Changed from harmonic minor (G#) to natural minor (G)
+    const NOTE_NAMES = ["G","F","E","D","C","B","A"];
     // Semitones from A (A=0)
-    const NOTE_TO_SEMI = { "A":0, "B":2, "C":3, "D":5, "E":7, "F":8, "G#":11 };
+    const NOTE_TO_SEMI = { "A":0, "B":2, "C":3, "D":5, "E":7, "F":8, "G":10 };
 
     function makeSeqState(){ return { steps: Array.from({length:8}, () => ({ note:null, oct:0 })) }; }
     let bassState = makeSeqState();
@@ -1822,7 +2178,7 @@
     const LOOKAHEAD_MS = 15;
 
     function hzForNote(noteName, oct){
-      const baseMidi = 45; // A2 (changed from C3 to A2)
+      const baseMidi = 45; // A2
       const semi = NOTE_TO_SEMI[noteName];
       const midi = baseMidi + semi + (oct*12);
       return 440 * Math.pow(2, (midi - 69) / 12);
@@ -1862,6 +2218,21 @@
     }
 
     function scheduleStep(stepIndex, time){
+      // Calculate current bar and beat for loop recording
+      const currentBar = Math.floor(stepIndex / 4) + 1; // 1-4
+      const currentBeat = (stepIndex % 4) + 1; // 1-4
+
+      // Check if we should start loop recording (at step 0 = bar 1, beat 1)
+      if(stepIndex === 0 && armedSlot >= 0){
+        startLoopRecording(armedSlot);
+      }
+
+      // Check if we should stop loop recording (at step 15 = bar 4, beat 4, after playing)
+      if(stepIndex === 15 && recordingSlot >= 0){
+        // Schedule stop slightly after this step plays
+        setTimeout(() => stopLoopRecording(), sixteenthSec() * 900);
+      }
+
       for(const tr of tracks){
         if(tr.pattern[stepIndex]){
           if(tr.key === "kick") triggerSidechain(time);
@@ -1905,6 +2276,11 @@
       if(newStep !== playStep){
         playStep = newStep;
         setPlayheadUI(playStep);
+
+        // Update beat indicator
+        const bar = Math.floor(playStep / 4) + 1;
+        const beat = (playStep % 4) + 1;
+        updateBeatIndicator(bar, beat);
       }
       rafId = requestAnimationFrame(updatePlayhead);
     }
@@ -1943,6 +2319,7 @@
       masterStopBtn.disabled = false;
 
       setPlayheadUI(0);
+      updateBeatIndicator(1, 1);
       rafId = requestAnimationFrame(updatePlayhead);
       scheduler();
 
@@ -1956,246 +2333,30 @@
       if(rafId) cancelAnimationFrame(rafId);
       rafId = null;
 
+      // Stop any ongoing loop recording
+      if(recordingSlot >= 0) stopLoopRecording();
+      armedSlot = -1;
+      updateLoopUI();
+
       hardStopAllSources();
       clearPlayheadUI();
 
       masterPlayBtn.disabled = false;
       masterStopBtn.disabled = true;
 
+      updateBeatIndicator(1, 0);
       setStatus("Stopped");
     }
 
     masterPlayBtn.addEventListener("click", masterPlay);
     masterStopBtn.addEventListener("click", masterStop);
 
-    // ---------- recording (same as previous) ----------
-    const recBtn = document.getElementById("recBtn");
-    const recPlayBtn = document.getElementById("recPlayBtn");
-    const recStopBtn = document.getElementById("recStopBtn");
-    const recExportBtn = document.getElementById("recExportBtn");
-
-    const recCountdownEl = document.getElementById("recCountdown");
-    const recFillEl = document.getElementById("recFill");
-    const recLineEl = document.getElementById("recLine");
-
-    let mediaRec = null;
-    let recChunks = [];
-    let recWavBlob = null;
-    let recWavUrl = null;
-
-    const recAudio = new Audio();
-    recAudio.preload = "auto";
-
-    let recTick=null;
-    let recStartMs=0;
-    let recTimeout=null;
-    let isRecording=false;
-
-    function setRecProgress(pct){
-      pct = clamp(pct, 0, 1);
-      const x = pct*100;
-      recFillEl.style.width = x + "%";
-      recLineEl.style.left = x + "%";
-    }
-
-    function startCountdown(){
-      recStartMs = performance.now();
-      recCountdownEl.textContent = "60";
-      setRecProgress(0);
-      statusRight.textContent = "⏺ 60s";
-
-      if(recTick) clearInterval(recTick);
-      recTick = setInterval(() => {
-        const elapsed = (performance.now() - recStartMs)/1000;
-        const pct = elapsed/60;
-        setRecProgress(pct);
-
-        const remain = Math.max(0, 60 - Math.floor(elapsed));
-        recCountdownEl.textContent = String(remain);
-        statusRight.textContent = `⏺ ${remain}s`;
-
-        if(elapsed >= 60){
-          clearInterval(recTick);
-          recTick = null;
-          recCountdownEl.textContent = "0";
-          statusRight.textContent = "⏺ 0s";
-          setRecProgress(1);
-        }
-      }, 50);
-    }
-
-    function stopCountdown(reset=true){
-      if(recTick){ clearInterval(recTick); recTick=null; }
-      statusRight.textContent = "";
-      if(reset){
-        recCountdownEl.textContent = "60";
-        setRecProgress(0);
-      }
-    }
-
-    function wavFromFloat32(chL, chR, sampleRate){
-      const n = Math.min(chL.length, chR.length);
-      const bytesPerSample = 2;
-      const blockAlign = 2*bytesPerSample;
-      const byteRate = sampleRate*blockAlign;
-      const dataSize = n*blockAlign;
-
-      const buffer = new ArrayBuffer(44 + dataSize);
-      const view = new DataView(buffer);
-
-      function writeStr(off, s){
-        for(let i=0;i<s.length;i++) view.setUint8(off+i, s.charCodeAt(i));
-      }
-
-      writeStr(0, "RIFF");
-      view.setUint32(4, 36 + dataSize, true);
-      writeStr(8, "WAVE");
-
-      writeStr(12, "fmt ");
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true);
-      view.setUint16(22, 2, true);
-      view.setUint32(24, sampleRate, true);
-      view.setUint32(28, byteRate, true);
-      view.setUint16(32, blockAlign, true);
-      view.setUint16(34, 16, true);
-
-      writeStr(36, "data");
-      view.setUint32(40, dataSize, true);
-
-      let o = 44;
-      for(let i=0;i<n;i++){
-        const l = clamp(chL[i], -1, 1);
-        const r = clamp(chR[i], -1, 1);
-        view.setInt16(o, Math.round(l*32767), true); o += 2;
-        view.setInt16(o, Math.round(r*32767), true); o += 2;
-      }
-      return new Blob([buffer], { type:"audio/wav" });
-    }
-
-    function cleanupRecWavUrl(){
-      if(recWavUrl){
-        try{ URL.revokeObjectURL(recWavUrl); }catch(_){}
-        recWavUrl = null;
-      }
-    }
-
-    function setRecBtnUI(){
-      recBtn.textContent = isRecording ? "■ Stop" : "● Record";
-      recBtn.classList.toggle("primary", isRecording);
-    }
-
-    function startMasterRecord(){
-      if(!ctx || !recDest) return;
-      if(mediaRec && mediaRec.state === "recording") return;
-
-      try{
-        recChunks = [];
-        recWavBlob = null;
-        cleanupRecWavUrl();
-
-        mediaRec = new MediaRecorder(recDest.stream);
-        mediaRec.ondataavailable = (e)=>{ if(e.data && e.data.size) recChunks.push(e.data); };
-
-        mediaRec.onstop = async () => {
-          setRecProgress(1);
-          recCountdownEl.textContent = "0";
-          statusRight.textContent = "⏺ 0s";
-          stopCountdown(false);
-
-          try{
-            const blob = new Blob(recChunks, { type: mediaRec.mimeType || "audio/webm" });
-            const arr = await blob.arrayBuffer();
-            const abuf = await new Promise((resolve,reject)=>ctx.decodeAudioData(arr, resolve, reject));
-            const chL = abuf.getChannelData(0);
-            const chR = (abuf.numberOfChannels>1) ? abuf.getChannelData(1) : abuf.getChannelData(0);
-            recWavBlob = wavFromFloat32(chL, chR, abuf.sampleRate);
-
-            cleanupRecWavUrl();
-            recWavUrl = URL.createObjectURL(recWavBlob);
-
-            recExportBtn.disabled = false;
-            recPlayBtn.disabled = false;
-            recStopBtn.disabled = false;
-
-            setStatus("Recorded ✅ (Play / Stop / Export klaar)");
-          }catch(err){
-            console.error(err);
-            setStatus("Record failed");
-          }finally{
-            isRecording = false;
-            setRecBtnUI();
-            if(recTimeout){ clearTimeout(recTimeout); recTimeout=null; }
-          }
-        };
-
-        mediaRec.start();
-        isRecording = true;
-        setRecBtnUI();
-
-        recExportBtn.disabled = true;
-        recPlayBtn.disabled = true;
-        recStopBtn.disabled = true;
-
-        setStatus("Recording… (max 1:00)");
-        startCountdown();
-        recTimeout = setTimeout(()=>stopMasterRecord(), 60000);
-      }catch(err){
-        console.error(err);
-        setStatus("Recording not supported");
-        isRecording = false;
-        setRecBtnUI();
-      }
-    }
-
-    function stopMasterRecord(){
-      if(recTimeout){ clearTimeout(recTimeout); recTimeout=null; }
-      if(mediaRec && mediaRec.state === "recording"){
-        try{ mediaRec.stop(); }catch(_){}
-      }
-    }
-
-    function toggleRecord(){
-      if(!ctx) return;
-      if(isRecording) stopMasterRecord();
-      else startMasterRecord();
-    }
-
-    function playRecordedWav(){
-      if(!recWavUrl) return;
-      recAudio.pause();
-      recAudio.currentTime = 0;
-      recAudio.src = recWavUrl;
-      recAudio.play().catch(()=>{});
-    }
-
-    function stopRecordedWav(){
-      recAudio.pause();
-      try{ recAudio.currentTime = 0; }catch(_){}
-    }
-
-    function exportMasterWav(){
-      if(!recWavBlob) return;
-      const a = document.createElement("a");
-      a.href = recWavUrl || URL.createObjectURL(recWavBlob);
-      a.download = "master_recording.wav";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setStatus("WAV exported ✅");
-    }
-
-    recBtn.addEventListener("click", async ()=>{ await resumeAudio(); toggleRecord(); });
-    recPlayBtn.addEventListener("click", playRecordedWav);
-    recStopBtn.addEventListener("click", stopRecordedWav);
-    recExportBtn.addEventListener("click", exportMasterWav);
-
     // ---------- save / load ----------
     const saveFileBtn = document.getElementById("saveFileBtn");
     const loadFileBtn = document.getElementById("loadFileBtn");
     const loadFileInput = document.getElementById("loadFileInput");
 
-    const STORE_KEY = "mm_drum_bass_lead_mixer_Aminor_v1";
+    const STORE_KEY = "mm_drum_bass_lead_mixer_Anatural_v2";
 
     let saveTimer=null;
     let dirty=false;
@@ -2369,6 +2530,7 @@
     buildGridOnce();
     renderSeqGrid(tbGridEl, bassState, "bass");
     renderSeqGrid(leadGridEl, leadState, "lead");
+    updateLoopUI();
 
     loadAllSounds();
 
@@ -2377,7 +2539,7 @@
       applyState(saved);
       setStatus("Autosave loaded ✅");
     }else{
-      setStatus("Ready");
+      setStatus("Ready - Click a loop button to arm, then Play to record 4 bars!");
     }
   })();
   </script>
