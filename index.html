@@ -900,6 +900,7 @@
     const loopSlots = [null, null, null, null]; // AudioBuffer for each slot
     let armedSlot = -1; // Which slot is armed for recording (-1 = none)
     let recordingSlot = -1; // Which slot is currently recording (-1 = none)
+    let recordingBarCount = 0; // How many bars have been recorded (need 4)
     let playingSlot = -1; // Which slot is playing (-1 = none)
     let loopRecorder = null; // MediaRecorder for loop recording
     let loopChunks = [];
@@ -917,7 +918,7 @@
           loopStatuses[i].classList.add("armed");
         } else if(i === recordingSlot){
           btn.classList.add("recording");
-          loopStatuses[i].textContent = "Recording...";
+          loopStatuses[i].textContent = `Rec ${recordingBarCount}/4`;
           loopStatuses[i].classList.add("recording");
         } else if(i === playingSlot){
           btn.classList.add("playing");
@@ -945,10 +946,29 @@
       updateLoopUI();
     }
 
+    // Apply fade in/out to remove clicks
+    function applyLoopFade(buf, fadeMs=10){
+      if(!buf || !ctx) return buf;
+      const sr = buf.sampleRate;
+      const fadeSamples = Math.max(1, Math.floor(sr * (fadeMs / 1000)));
+      for(let c = 0; c < buf.numberOfChannels; c++){
+        const data = buf.getChannelData(c);
+        const len = data.length;
+        const n = Math.min(fadeSamples, Math.floor(len / 2));
+        for(let i = 0; i < n; i++){
+          const gain = i / n;
+          data[i] *= gain; // fade in
+          data[len - 1 - i] *= gain; // fade out
+        }
+      }
+      return buf;
+    }
+
     function startLoopRecording(slot){
       if(!ctx || !recDest) return;
       
       recordingSlot = slot;
+      recordingBarCount = 1; // Starting bar 1
       armedSlot = -1;
       loopChunks = [];
       
@@ -959,31 +979,43 @@
         };
         
         loopRecorder.onstop = async () => {
+          const slotToSave = recordingSlot;
           try {
             const blob = new Blob(loopChunks, { type: loopRecorder.mimeType || "audio/webm" });
             const arr = await blob.arrayBuffer();
             const buf = await new Promise((resolve, reject) => 
               ctx.decodeAudioData(arr, resolve, reject)
             );
-            loopSlots[recordingSlot] = buf;
-            setStatus(`Loop ${recordingSlot + 1} recorded! ✅`);
+            // Apply fade to remove clicks
+            loopSlots[slotToSave] = applyLoopFade(buf, 8);
+            setStatus(`Loop ${slotToSave + 1} recorded! ✅`);
           } catch(err) {
             console.error("Loop decode error:", err);
-            setStatus(`Loop ${recordingSlot + 1} failed`);
+            setStatus(`Loop ${slotToSave + 1} failed`);
           } finally {
             recordingSlot = -1;
+            recordingBarCount = 0;
             updateLoopUI();
           }
         };
         
         loopRecorder.start();
         updateLoopUI();
-        setStatus(`Recording Loop ${slot + 1}...`);
+        setStatus(`Recording Loop ${slot + 1}... (Bar 1/4)`);
       } catch(err) {
         console.error("Loop record error:", err);
         recordingSlot = -1;
+        recordingBarCount = 0;
         updateLoopUI();
       }
+    }
+
+    function incrementBarCount(){
+      if(recordingSlot < 0) return false;
+      recordingBarCount++;
+      updateLoopUI();
+      setStatus(`Recording Loop ${recordingSlot + 1}... (Bar ${recordingBarCount}/4)`);
+      return recordingBarCount >= 4;
     }
 
     function stopLoopRecording(){
@@ -2157,14 +2189,23 @@
     }
 
     function scheduleStep(stepIndex, time){
-      // Check if we should stop loop recording (when we come back to step 0 after recording)
-      if(stepIndex === 0 && recordingSlot >= 0){
-        stopLoopRecording();
-      }
-
-      // Check if we should start loop recording (at step 0 = bar 1, beat 1)
-      if(stepIndex === 0 && armedSlot >= 0){
-        startLoopRecording(armedSlot);
+      // At step 0 (start of a bar), handle loop recording logic
+      if(stepIndex === 0){
+        // If recording, increment bar count
+        if(recordingSlot >= 0 && recordingBarCount > 0){
+          // We've completed a bar, check if we should stop
+          if(recordingBarCount >= 4){
+            stopLoopRecording();
+          } else {
+            // Increment to next bar
+            incrementBarCount();
+          }
+        }
+        
+        // Check if we should start loop recording
+        if(armedSlot >= 0){
+          startLoopRecording(armedSlot);
+        }
       }
 
       for(const tr of tracks){
