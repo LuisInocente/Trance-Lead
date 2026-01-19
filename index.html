@@ -931,7 +931,7 @@
           loopStatuses[i].classList.add("recording");
         } else if(i === pendingPlaySlot){
           btn.classList.add("pending");
-          loopStatuses[i].textContent = "Next...";
+          loopStatuses[i].textContent = "Queued";
           loopStatuses[i].classList.add("pending");
         } else if(i === playingSlot){
           btn.classList.add("playing");
@@ -1052,10 +1052,10 @@
         return;
       }
       
-      // Queue the loop to start at next bar
+      // Queue the loop to start after current 4-bar cycle
       pendingPlaySlot = slot;
       updateLoopUI();
-      setStatus(`Loop ${slot + 1} queued - starts next bar`);
+      setStatus(`Loop ${slot + 1} queued - plays after 4 bars`);
     }
 
     function playLoopNow(slot){
@@ -2235,16 +2235,13 @@
     }
 
     function scheduleStep(stepIndex, time){
-      // Bar boundaries are at steps 0, 4, 8, 12 (4 steps per bar)
-      const isBarStart = (stepIndex % 4 === 0);
-      
-      // At bar start, handle loop playback
-      if(isBarStart && pendingPlaySlot >= 0){
-        startQueuedLoop();
-      }
-      
-      // At step 0 (start of 4-bar cycle), handle loop recording logic
+      // At step 0 (start of 4-bar cycle), handle loop playback and recording
       if(stepIndex === 0){
+        // Start any queued loop playback (after previous 4-bar loop completes)
+        if(pendingPlaySlot >= 0){
+          startQueuedLoop();
+        }
+        
         // If recording, increment bar count
         if(recordingSlot >= 0 && recordingBarCount > 0){
           // We've completed a bar, check if we should stop
