@@ -181,41 +181,6 @@
     .loopControlBtn.stop{ background:#ef4444; color:#fff; border-color:#dc2626; }
     .loopControlBtn:disabled{ opacity:0.4; cursor:not-allowed; }
 
-    .beatIndicator{
-      display:flex;
-      align-items:center;
-      gap:6px;
-      padding:6px 12px;
-      background:#fff;
-      border:1px solid var(--border);
-      border-radius:12px;
-    }
-
-    .beatDot{
-      width:12px;
-      height:12px;
-      border-radius:50%;
-      background:#e5e5e5;
-      transition:all 0.1s ease;
-    }
-
-    .beatDot.active{
-      background:#111;
-      transform:scale(1.3);
-    }
-
-    .beatDot.bar1.active{ background:#ef4444; }
-    .beatDot.bar2.active{ background:#f59e0b; }
-    .beatDot.bar3.active{ background:#22c55e; }
-    .beatDot.bar4.active{ background:#3b82f6; }
-
-    .barLabel{
-      font-size:11px;
-      font-weight:900;
-      color:var(--muted);
-      min-width:50px;
-    }
-
     .pill{
       display:flex; align-items:center; gap:10px;
       padding:8px 10px;
@@ -635,6 +600,23 @@
   <header>
     <div class="headerTop">
       <div class="topLeft">
+        <div class="pill">
+          <span>Tempo</span>
+          <input id="tempo" class="tempoRange" type="range" min="80" max="160" value="120">
+          <strong id="tempoVal">120</strong>
+        </div>
+        <div class="pill">
+          <span>Vol</span>
+          <input id="masterVol" type="range" min="0" max="1" value="0.90" step="0.01">
+        </div>
+      </div>
+
+      <div class="topMid">
+        <button id="masterPlay" class="primary">▶ Play</button>
+        <button id="masterStop" disabled>■ Stop</button>
+      </div>
+
+      <div class="topRight">
         <div class="loopSlots">
           <div class="loopSlot">
             <button class="loopBtn" id="loop1Btn" data-slot="0">1</button>
@@ -655,30 +637,6 @@
         </div>
         <button class="loopControlBtn stop" id="loopStopBtn">Stop</button>
         <button class="loopControlBtn" id="loopClearBtn">Clear</button>
-      </div>
-
-      <div class="topMid">
-        <button id="masterPlay" class="primary">▶ Play</button>
-        <button id="masterStop" disabled>■ Stop</button>
-        <div class="beatIndicator">
-          <span class="barLabel" id="barLabel">Bar 1</span>
-          <div class="beatDot bar1" id="beat1"></div>
-          <div class="beatDot bar2" id="beat2"></div>
-          <div class="beatDot bar3" id="beat3"></div>
-          <div class="beatDot bar4" id="beat4"></div>
-        </div>
-      </div>
-
-      <div class="topRight">
-        <div class="pill">
-          <span>Tempo</span>
-          <input id="tempo" class="tempoRange" type="range" min="80" max="160" value="120">
-          <strong id="tempoVal">120</strong>
-        </div>
-        <div class="pill">
-          <span>Vol</span>
-          <input id="masterVol" type="range" min="0" max="1" value="0.90" step="0.01">
-        </div>
       </div>
     </div>
   </header>
@@ -921,25 +879,6 @@
       }
       scheduleSave();
     });
-
-    // ---------- Beat indicator ----------
-    const barLabelEl = document.getElementById("barLabel");
-    const beatDots = [
-      document.getElementById("beat1"),
-      document.getElementById("beat2"),
-      document.getElementById("beat3"),
-      document.getElementById("beat4")
-    ];
-
-    function updateBeatIndicator(bar, beat){
-      barLabelEl.textContent = `Bar ${bar}`;
-      beatDots.forEach((dot, i) => {
-        dot.classList.remove("active", "bar1", "bar2", "bar3", "bar4");
-        if(i < beat){
-          dot.classList.add("active", `bar${bar}`);
-        }
-      });
-    }
 
     // ---------- Loop Recording System ----------
     const loopBtns = [
@@ -2218,19 +2157,14 @@
     }
 
     function scheduleStep(stepIndex, time){
-      // Calculate current bar and beat for loop recording
-      const currentBar = Math.floor(stepIndex / 4) + 1; // 1-4
-      const currentBeat = (stepIndex % 4) + 1; // 1-4
+      // Check if we should stop loop recording (when we come back to step 0 after recording)
+      if(stepIndex === 0 && recordingSlot >= 0){
+        stopLoopRecording();
+      }
 
       // Check if we should start loop recording (at step 0 = bar 1, beat 1)
       if(stepIndex === 0 && armedSlot >= 0){
         startLoopRecording(armedSlot);
-      }
-
-      // Check if we should stop loop recording (at step 15 = bar 4, beat 4, after playing)
-      if(stepIndex === 15 && recordingSlot >= 0){
-        // Schedule stop slightly after this step plays
-        setTimeout(() => stopLoopRecording(), sixteenthSec() * 900);
       }
 
       for(const tr of tracks){
@@ -2276,11 +2210,6 @@
       if(newStep !== playStep){
         playStep = newStep;
         setPlayheadUI(playStep);
-
-        // Update beat indicator
-        const bar = Math.floor(playStep / 4) + 1;
-        const beat = (playStep % 4) + 1;
-        updateBeatIndicator(bar, beat);
       }
       rafId = requestAnimationFrame(updatePlayhead);
     }
@@ -2319,7 +2248,6 @@
       masterStopBtn.disabled = false;
 
       setPlayheadUI(0);
-      updateBeatIndicator(1, 1);
       rafId = requestAnimationFrame(updatePlayhead);
       scheduler();
 
@@ -2344,7 +2272,6 @@
       masterPlayBtn.disabled = false;
       masterStopBtn.disabled = true;
 
-      updateBeatIndicator(1, 0);
       setStatus("Stopped");
     }
 
