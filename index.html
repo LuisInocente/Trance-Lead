@@ -139,6 +139,13 @@
       box-shadow:0 0 20px rgba(59,130,246,0.5);
     }
 
+    .loopBtn.pending{
+      background:#a855f7;
+      border-color:#9333ea;
+      color:#fff;
+      animation:pulse 0.6s ease-in-out infinite;
+    }
+
     @keyframes pulse{
       0%,100%{ opacity:1; }
       50%{ opacity:0.7; }
@@ -166,6 +173,7 @@
     .loopStatus.recording{ color:#ef4444; }
     .loopStatus.ready{ color:#22c55e; }
     .loopStatus.playing{ color:#3b82f6; }
+    .loopStatus.pending{ color:#a855f7; }
 
     .loopControlBtn{
       height:32px;
@@ -902,6 +910,7 @@
     let recordingSlot = -1; // Which slot is currently recording (-1 = none)
     let recordingBarCount = 0; // How many bars have been recorded (need 4)
     let playingSlot = -1; // Which slot is playing (-1 = none)
+    let pendingPlaySlot = -1; // Which slot is queued to play at next bar
     let loopRecorder = null; // MediaRecorder for loop recording
     let loopChunks = [];
     let loopRecordStartStep = -1;
@@ -909,8 +918,8 @@
 
     function updateLoopUI(){
       loopBtns.forEach((btn, i) => {
-        btn.classList.remove("armed", "recording", "ready", "playing");
-        loopStatuses[i].classList.remove("armed", "recording", "ready", "playing");
+        btn.classList.remove("armed", "recording", "ready", "playing", "pending");
+        loopStatuses[i].classList.remove("armed", "recording", "ready", "playing", "pending");
         
         if(i === armedSlot){
           btn.classList.add("armed");
@@ -920,6 +929,10 @@
           btn.classList.add("recording");
           loopStatuses[i].textContent = `Rec ${recordingBarCount}/4`;
           loopStatuses[i].classList.add("recording");
+        } else if(i === pendingPlaySlot){
+          btn.classList.add("pending");
+          loopStatuses[i].textContent = "Next...";
+          loopStatuses[i].classList.add("pending");
         } else if(i === playingSlot){
           btn.classList.add("playing");
           loopStatuses[i].textContent = "Playing";
@@ -1024,12 +1037,34 @@
       }
     }
 
-    function playLoop(slot){
+    function queueLoop(slot){
+      if(!ctx || !loopSlots[slot]) return;
+      
+      // If sequencer is not running, play immediately
+      if(!isRunning){
+        playLoopNow(slot);
+        return;
+      }
+      
+      // If same loop is already playing, stop it
+      if(playingSlot === slot){
+        stopLoopPlayback();
+        return;
+      }
+      
+      // Queue the loop to start at next bar
+      pendingPlaySlot = slot;
+      updateLoopUI();
+      setStatus(`Loop ${slot + 1} queued - starts next bar`);
+    }
+
+    function playLoopNow(slot){
       if(!ctx || !loopSlots[slot]) return;
       
       // Stop any currently playing loop
       stopLoopPlayback();
       
+      pendingPlaySlot = -1;
       playingSlot = slot;
       
       // Create source and play
@@ -1050,7 +1085,18 @@
       setStatus(`Playing Loop ${slot + 1}`);
     }
 
+    function startQueuedLoop(){
+      if(pendingPlaySlot >= 0 && loopSlots[pendingPlaySlot]){
+        playLoopNow(pendingPlaySlot);
+      }
+    }
+
+    function playLoop(slot){
+      queueLoop(slot);
+    }
+
     function stopLoopPlayback(){
+      pendingPlaySlot = -1;
       if(loopSource){
         try { loopSource.stop(0); } catch(_){}
         loopSource = null;
@@ -1075,11 +1121,11 @@
       btn.addEventListener("click", async () => {
         await resumeAudio();
         
-        if(playingSlot === i){
-          // If this loop is playing, stop it
+        if(playingSlot === i || pendingPlaySlot === i){
+          // If this loop is playing or pending, stop it
           stopLoopPlayback();
         } else if(loopSlots[i]){
-          // If this slot has a loop, play it
+          // If this slot has a loop, queue it to play
           playLoop(i);
         } else if(!isRunning){
           // If not playing, arm for recording (recording only works while playing)
@@ -2189,7 +2235,15 @@
     }
 
     function scheduleStep(stepIndex, time){
-      // At step 0 (start of a bar), handle loop recording logic
+      // Bar boundaries are at steps 0, 4, 8, 12 (4 steps per bar)
+      const isBarStart = (stepIndex % 4 === 0);
+      
+      // At bar start, handle loop playback
+      if(isBarStart && pendingPlaySlot >= 0){
+        startQueuedLoop();
+      }
+      
+      // At step 0 (start of 4-bar cycle), handle loop recording logic
       if(stepIndex === 0){
         // If recording, increment bar count
         if(recordingSlot >= 0 && recordingBarCount > 0){
@@ -2305,6 +2359,7 @@
       // Stop any ongoing loop recording
       if(recordingSlot >= 0) stopLoopRecording();
       armedSlot = -1;
+      pendingPlaySlot = -1;
       updateLoopUI();
 
       hardStopAllSources();
